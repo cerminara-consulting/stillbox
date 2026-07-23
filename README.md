@@ -65,14 +65,41 @@ XcodeGen is the convention used throughout the Apple-platform Mac setup for `nat
 
 **If you prefer a checked-in `.xcodeproj`:** generate it once with XcodeGen, then `git add` the project file. The XcodeGen `project.yml` stays as documentation for the project structure.
 
+### Notes on the XcodeGen spec
+
+- **`DEVELOPMENT_ASSET_PATHS`** in `project.yml` tells Xcode to expose `App/Preview Content` as a "Development Assets" folder — used by SwiftUI Previews (⌥⌘↩) for placeholder content. If XcodeGen rejects the value, change to a YAML list (`[ "App/Preview Content" ]`) and re-run.
+- **`info:` block owns the truth.** The hand-written `App/Resources/Info.plist` is *not* the source of truth — `project.yml`'s `info.properties` is. When you run `xcodegen generate`, XcodeGen overwrites `Info.plist` with the values from `project.yml`. Edit `project.yml`, not `Info.plist`.
+- **`App/Sources/App/StillBoxApp.swift`** lives three folders deep because that's where XcodeGen dropped it when generating Xcode groups from the directory tree. Not a problem, just a navigation quirk.
+
 ## First-build runbook (on the Mac)
 
 1. **Install Xcode 15.4+** (SwiftUI 17 features require it). On a fresh Mac: `xcode-select --install` then download Xcode 15.4 from the App Store.
-2. **Generate the project:** `xcodegen generate` from the repo root.
-3. **Set signing team:** open the project in Xcode → StillBox target → Signing & Capabilities → select Cerminara Consulting developer team.
-4. **Run on simulator:** ⌘R with iPhone 15 Pro / iOS 17.x simulator. Should see the dark room and a calm, bordered box.
-5. **Run on physical device:** Plug in iPhone, unlock it, ⌘R. Will need to trust the developer certificate on the device (Settings → General → VPN & Device Management).
-6. **TestFlight:** Once the first build runs, archive (Product → Archive), then Distribute → TestFlight → Internal Testing.
+2. **Pull the repo:**
+   ```bash
+   git clone https://github.com/cerminara-consulting/stillbox.git
+   cd stillbox
+   git log --oneline    # confirm you got all three commits
+   ```
+3. **Generate the project:**
+   ```bash
+   brew install xcodegen   # skip if already installed
+   xcodegen generate
+   open StillBox.xcodeproj
+   ```
+4. **Set signing team:** open the project in Xcode → StillBox target → Signing & Capabilities → select Cerminara Consulting developer team. If "Cerminara Consulting" is not in the list, sign in to Xcode with your Apple Developer account first (Xcode → Settings → Accounts).
+5. **Pick a destination:** top-left scheme picker → an iPhone 15 Pro (or 16 Pro) simulator on iOS 17.x. ⌘R. First build will take 30–60 seconds (clean build).
+6. **Verify it runs.** You should see a dark screen with a single bordered square centered, the word "breathe" above it, and two text links ("Patterns & settings", "About") at the bottom. Tap anywhere to start a 4-4-4-4 breath cycle.
+7. **Open Settings.** Long-press anywhere for 0.6s — the Settings sheet slides up. Pattern picker shows "Box" selected.
+8. **Run on physical device:** Plug in iPhone, unlock it, ⌘R. Will need to trust the developer certificate on the device (Settings → General → VPN & Device Management → tap your Apple ID → Trust).
+9. **TestFlight:** Once the first build runs in the simulator, archive (Product → Archive), then Distribute → TestFlight → Internal Testing.
+
+### What to watch for on first build
+
+- **Compile errors:** if `xcodebuild` complains about anything in `BreathEngine.swift`, `StoreManager.swift`, or `Views/*.swift`, paste the error back here verbatim. Don't try to fix it blind — these are subtle actor-isolation rules.
+- **"App icon not found":** expected. The `AppIcon.appiconset/Contents.json` slot exists but the 1024×1024 PNG does not (not built yet — placeholder only). The simulator shows a generic icon; the app still runs.
+- **"Privacy manifest invalid":** if Xcode complains about `PrivacyInfo.xcprivacy`, confirm the file format is the XML plist form. Xcode 15.4 accepts it directly.
+- **iAP products not found:** expected on first run, before App Store Connect setup. `StoreManager.refresh()` swallows the error silently — the Settings sheet just won't show the "Unlock patterns" button until you create the IAP product ID in App Store Connect.
+- **Reduce Motion feedback:** enable Settings → Accessibility → Motion → Reduce Motion on the simulator, then relaunch StillBox. The box should stay static while still updating its phase text ("in" / "hold" / "out" / "hold").
 
 ## Configuration before App Store submission
 
