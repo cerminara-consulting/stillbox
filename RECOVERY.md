@@ -1,68 +1,26 @@
-# StillBox Mac recovery — disk space block
+# StillBox — Mac recovery runbook
 
-## What happened
+If something is broken, run these in order and tell me which step the
+failure surfaces at.
 
-Mac reports "No space left on device" when Git tries to update its own
-`.git/FETCH_HEAD` file. Every `git pull` since has silently failed.
-
-Consequences:
-
-- The latest `project.yml` with the DEVELOPMENT_ASSET_PATHS fix never
-  landed on this Mac. XcodeGen keeps regenerating from the old version.
-- The Xcode warnings about `App/Preview` and `Content` are correct for
-  the *old* `project.yml` still on disk.
-- Apple iOS Simulator runs eat disk fast (~5-15 GB per iPhone per iOS).
-  Also: Xcode's `DerivedData/` directory grows unboundedly; previous
-  test apps; macOS Time Machine local snapshots.
-
-## Step 1 — free space (run these in order)
-
-```bash
-# Quick wins. None of these deletes code or documents.
-xcrun simctl shutdown all 2>/dev/null
-xcrun simctl delete unavailable               # removes simulators you can't run
-rm -rf ~/Library/Developer/Xcode/DerivedData/*    # build cache, can be 30+ GB
-rm -rf ~/Library/Developer/CoreSimulator/Caches/* # simulator cache
-rm -rf ~/Library/Caches/com.apple.dt.Xcode/*     # Xcode UI cache, can be 5+ GB
-tmutil thinlocalsnapshots / 1000000000000 2>/dev/null  # nuke old Time Machine local snapshots
-
-# After each big rm, verify:
-df -h /
-```
-
-Goal: at least 20 GB free.
-
-## Step 2 — verify the pull now works
+## 1. Pull the latest (the source of truth is `main` on `origin`)
 
 ```bash
 cd /Users/cerminaraconsulting/stillbox/stillbox
-git status
-# Expect: "Your branch is up to date" or "Your branch is behind ... commits"
-
 git pull
-# Expect: a small fetch + merge, no errors
+git status
+# Expect: "nothing to commit, working tree clean"
 ```
 
-## Step 3 — verify the fix is on disk
+## 2. Confirm the directory layout is right
 
 ```bash
-grep -A1 DEVELOPMENT_ASSET_PATHS project.yml
+ls App/
+# Expect: Assets.xcassets  Engine  Models  PreviewContent  Resources  Sources  Store  Views
+#          ^^^^^^^^^^^^^^ no space
 ```
 
-Expected output:
-```
-DEVELOPMENT_ASSET_PATHS:
-  - "App/PreviewContent"
-
-The directory used to be `App/Preview Content` (with a literal space).
-Renamed to remove the space because Xcode's project format kept splitting
-the value on the space and reporting `.../App/Preview` and `.../Content`
-as separate non-existent paths. With no space, Xcode treats it as one path.
-```
-
-If you see the old form (`DEVELOPMENT_ASSET_PATHS: "App/Preview Content"`), that means the file is still stale — wait and tell me, and we'll diagnose further.
-
-## Step 4 — regenerate and rebuild
+## 3. Regenerate the .xcodeproj from scratch
 
 ```bash
 rm -rf StillBox.xcodeproj
@@ -70,12 +28,58 @@ xcodegen generate
 open StillBox.xcodeproj
 ```
 
-In Xcode: pick iPhone 15 Pro simulator, ⌘R.
-
-If the DEVELOPMENT_ASSET_PATHS warnings are *still* there after this, run:
+## 4. Verify XcodeGen wrote the right path into pbxproj
 
 ```bash
-grep -A3 DEVELOPMENT_ASSET_PATHS StillBox.xcodeproj/project.pbxproj
+grep DEVELOPMENT_ASSET_PATHS StillBox.xcodeproj/project.pbxproj
 ```
 
-and paste the result back.
+Expect a line like:
+
+```
+DEVELOPMENT_ASSET_PATHS = "App/PreviewContent";
+```
+
+If you see it split across multiple lines, the path got migrated wrong.
+
+## 5. Build + run on iPhone 16 Pro
+
+In Xcode:
+
+- If the "Update to recommended settings" prompt appears → click
+  "Perform Changes" once. This is the Xcode 15.4 settings migration;
+  it should NOT split path strings now that the path has no space.
+- Click the `StillBox` target → Signing & Capabilities → Team set
+  to `Cerminara Consulting (LWPR7M772W)`.
+- Top scheme picker → your physical **iPhone 16 Pro** (under "My Devices").
+- ⌘R.
+
+## 6. On the device (only on first launch)
+
+If the iPhone shows "Untrusted Developer" — that's expected:
+
+iPhone → Settings → General → VPN & Device Management
+→ Apple Developer entry → Trust → confirm.
+
+Subsequent launches skip this.
+
+## 7. What to report back
+
+If after step 5 the warnings still appear, paste:
+
+1. The full Xcode warning text, verbatim.
+2. The output of: `grep DEVELOPMENT_ASSET_PATHS StillBox.xcodeproj/project.pbxproj`
+3. The output of: `cat project.yml | grep -B1 -A2 DEVELOPMENT_ASSET_PATHS`
+
+Without all three, I can't diagnose without guessing. Don't iterate
+blind — the diagnostic tells me what's stuck.
+
+## Common error → fix mapping (updated)
+
+| Symptom | Most likely cause | Fix |
+|---|---|---|
+| `cannot open '.git/FETCH_HEAD': No space left on device` | Mac disk full | `rm -rf ~/Library/Developer/Xcode/DerivedData/*`; free 20 GB |
+| `DEVELOPMENT_ASSET_PATHS does not exist: .../App/Preview` | Xcode reading cached/stale project | `rm -rf StillBox.xcodeproj && xcodegen generate` |
+| `Signing for StillBox requires a development team` | Apple ID not signed in | Xcode → Settings → Accounts → sign in; pick team in target |
+| `Update to recommended settings` prompt | Xcode version sync | "Perform Changes" — one-time only |
+| Real Swift compile error | Bug in the source | Paste verbatim error |
