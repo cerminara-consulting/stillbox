@@ -34,7 +34,7 @@ stillbox/
 │   │   ├── Info.plist
 │   │   └── PrivacyInfo.xcprivacy
 │   ├── Assets.xcassets/                 ← See "Brand assets" below
-│   └── Preview Content/
+│   └── PreviewContent/
 └── project.yml                    ← XcodeGen project spec (see "Generating the Xcode project")
 ```
 
@@ -67,7 +67,7 @@ XcodeGen is the convention used throughout the Apple-platform Mac setup for `nat
 
 ### Notes on the XcodeGen spec
 
-- **`DEVELOPMENT_ASSET_PATHS`** in `project.yml` tells Xcode to expose `App/Preview Content` as a "Development Assets" folder — used by SwiftUI Previews (⌥⌘↩) for placeholder content. If XcodeGen rejects the value, change to a YAML list (`[ "App/Preview Content" ]`) and re-run.
+- **`DEVELOPMENT_ASSET_PATHS`** in `project.yml` tells Xcode to expose `App/PreviewContent` as a "Development Assets" folder — used by SwiftUI Previews (⌥⌘↩) for placeholder content.
 - **`info:` block owns the truth.** The hand-written `App/Resources/Info.plist` is *not* the source of truth — `project.yml`'s `info.properties` is. When you run `xcodegen generate`, XcodeGen overwrites `Info.plist` with the values from `project.yml`. Edit `project.yml`, not `Info.plist`.
 - **`App/Sources/App/StillBoxApp.swift`** lives three folders deep because that's where XcodeGen dropped it when generating Xcode groups from the directory tree. Not a problem, just a navigation quirk.
 

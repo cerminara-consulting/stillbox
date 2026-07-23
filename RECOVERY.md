@@ -52,7 +52,12 @@ grep -A1 DEVELOPMENT_ASSET_PATHS project.yml
 Expected output:
 ```
 DEVELOPMENT_ASSET_PATHS:
-  - "App/Preview Content"
+  - "App/PreviewContent"
+
+The directory used to be `App/Preview Content` (with a literal space).
+Renamed to remove the space because Xcode's project format kept splitting
+the value on the space and reporting `.../App/Preview` and `.../Content`
+as separate non-existent paths. With no space, Xcode treats it as one path.
 ```
 
 If you see the old form (`DEVELOPMENT_ASSET_PATHS: "App/Preview Content"`), that means the file is still stale — wait and tell me, and we'll diagnose further.
