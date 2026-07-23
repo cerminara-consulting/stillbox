@@ -36,6 +36,11 @@ public final class BreathEngine: ObservableObject {
     /// via the Settings sheet. `nil` means "use the system value".
     @Published public var reduceMotionOverride: Bool? = nil
 
+    /// User-created patterns, mirrored from `AppSettings` whenever the
+    /// Settings sheet appears. The Settings sheet is the only place that
+    /// touches `customPatterns`, so a re-sync on present is sufficient.
+    @Published public var customPatterns: [BreathingPattern] = []
+
     /// True while a session is in the completion animation.
     public var isCompleting: Bool { if case .completing = session { return true } else { return false } }
 
@@ -132,6 +137,24 @@ public final class BreathEngine: ObservableObject {
         if reduceMotionOverride == nil {
             reduceMotionOverride = systemReduceMotion
         }
+    }
+
+    /// Re-sync user-created patterns from `AppSettings`. Called when the
+    /// Settings sheet appears; cheap, no debouncing needed because the
+    /// list is bounded (handful of patterns at most).
+    public func loadCustomPatterns() {
+        customPatterns = AppSettings.load().customPatterns
+    }
+
+    /// Persist the full settings bundle, including any newly-created
+    /// custom pattern. Called from `PatternCreatorView` save action.
+    public func saveCustomPattern(_ pattern: BreathingPattern) {
+        var settings = AppSettings.load()
+        if !settings.customPatterns.contains(where: { $0.id == pattern.id }) {
+            settings.customPatterns.append(pattern)
+            settings.save()
+        }
+        customPatterns = settings.customPatterns
     }
 
     /// True if the engine should advise the view layer to skip motion. Either

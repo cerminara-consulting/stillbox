@@ -113,9 +113,7 @@ public final class StoreManager: ObservableObject {
                     case .verified(let tx) = result,
                     let self
                 else { continue }
-                await MainActor.run {
-                    Task { await self.refreshEntitlements() }
-                }
+                await self.refreshEntitlements()
                 await tx.finish()
             }
         }

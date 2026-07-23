@@ -1,4 +1,5 @@
 import SwiftUI
+import StoreKit
 
 /// Settings sheet — modal, drag-to-dismiss. Hosts the pattern picker, round
 /// count, sound/haptics/reduce-motion toggles, tip jar, and a sub-screen
@@ -31,6 +32,9 @@ public struct SettingsSheet: View {
             .background(Color("BrandBackground"))
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear {
+                engine.loadCustomPatterns()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
@@ -39,6 +43,7 @@ public struct SettingsSheet: View {
             }
             .navigationDestination(isPresented: $showPatternCreator) {
                 PatternCreatorView { newPattern in
+                    engine.saveCustomPattern(newPattern)
                     engine.pattern = newPattern
                     showPatternCreator = false
                 }

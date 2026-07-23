@@ -93,8 +93,7 @@ public struct AppSettings: Codable, Equatable {
     public static func load() -> AppSettings {
         guard
             let data = UserDefaults.standard.data(forKey: userDefaultsKey),
-            let decoded = try? JSONDecoder().decode(AppSettings.self, from: data),
-            let _ = decoded
+            let decoded = try? JSONDecoder().decode(AppSettings.self, from: data)
         else {
             return .defaults
         }
