@@ -20,6 +20,12 @@ fastlane/test_output
 # macOS
 .DS_Store
 
+# XcodeGen output — regenerated per-machine; never commit
+StillBox.xcodeproj/
+
+# Xcode-regenerated Info.plist content (the source of truth is project.yml)
+App/Resources/Info.plist
+
 # IDE
 .vscode/
 .idea/
