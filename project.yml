@@ -33,7 +33,7 @@ targets:
       - path: App/Models
       - path: App/Store
       - path: App/Assets.xcassets
-      - path: App/Preview Content
+      - path: App/PreviewContent
     info:
       path: App/Resources/Info.plist
       properties:
