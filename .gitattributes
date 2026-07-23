@@ -1,0 +1,26 @@
+# Force LF line endings for all source files. CRLF on Windows would break
+# xcodebuild and is the most common Windows-authored iOS project bug.
+* text=auto eol=lf
+
+# All Swift, plist, json, yaml, yml, xml, md — pure source, always LF.
+*.swift   text eol=lf
+*.plist   text eol=lf
+*.xcprivacy text eol=lf
+*.json    text eol=lf
+*.yaml    text eol=lf
+*.yml     text eol=lf
+*.xml     text eol=lf
+*.md      text eol=lf
+*.entitlements text eol=lf
+
+# Xcode project / workspace files are text on Apple platforms; force LF so
+# the Mac never sees CRLF diffs.
+*.pbxproj    text eol=lf
+*.xcworkspacedata text eol=lf
+*.xcscheme   text eol=lf
+
+# Images / binary assets — keep raw, no CRLF normalization.
+*.png binary
+*.jpg binary
+*.webp binary
+*.icns binary
