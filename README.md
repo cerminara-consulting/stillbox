@@ -89,13 +89,15 @@ These are one-time setup steps in App Store Connect:
 
 These go in App Store Connect when you're ready to submit:
 
-- **Name (30 chars):** `StillBox — Calm Breathing`
-- **Subtitle (30 chars):** `Take a minute. Reset your breath.`
+- **Name (30 chars):** `StillBox: Box Breathing`
+- **Subtitle (30 chars):** `Box Breath · Calm · Reset`
 - **Promotional text (170 chars):** A dark, quiet space. Tap once. The box breathes with you. 4-4-4-4, 4-7-8, 3-4-5-3 — or make your own. From Cerminara Consulting.
 - **Description (4000 chars):** TBD at submission time. Anchor: the opening paragraph is the user-facing rephrasing of `SPEC.md §2 The Problem`.
 - **Keywords (100 chars):** `breath,breathing,calm,anxiety,sleep,focus,breathe,box,reset,mindful`
 - **Category:** `Health & Fitness`
 - **Content rating:** 4+ (no objectionable content)
+
+> The App Store Connect name `StillBox` (plain) was already taken — likely by one of the German breastfeeding-product brands using "Stillbox" as a brand mark. The "Box Breathing" suffix is the App Store's title-disambiguation pattern: it preserves our brand as the lead, anchors the search keyword (`box breathing`), and signals category to Apple's auto-classifier so we don't get mis-filed under lifestyle/kitchen.
 
 ## Brand assets
 
