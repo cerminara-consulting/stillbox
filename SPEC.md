@@ -232,4 +232,42 @@ If any of the four fail, the build doesn't ship. We iterate.
 
 ---
 
-*Last updated: 2026-07-22.*
+---
+
+## 16. Amendment — 2026-08-19 (ship-spec v2 supersedes §§5, 10, monetization)
+
+Scope freeze in effect. This amendment overrides the indicated sections of the original design contract.
+
+| § | Original (2026-07-22) | Superseded by (2026-08-19) |
+|---|---|---|
+| 5 — App Store | iPhone, iPad (universal layout) | **iPhone only** (`TARGETED_DEVICE_FAMILY: "1"`) |
+| 5 — In-app purchase | One-time unlock ($2.99) for additional patterns + custom pattern creator | **Removed.** All patterns free; custom pattern creator free. |
+| 5 — Tip jar | Three suggested tiers ($1, $3, $5) | **Removed.** No tip jar in v1. |
+| 10 — Monetization | Free + $2.99 unlock + tip jar | **Free only.** No StoreKit, no IAP, no in-app purchase surface. |
+| 10 — StoreKit 2 specifics | Product ID `com.cerminara.stillbox.patterns`, tip products `com.cerminara.stillbox.tip.{1,3,5}`, Restore Purchases | **Removed.** Delete `StoreManager.swift`, both product IDs, the unlock button, `TipJarView`, Restore Purchases in `AboutView`, and the StoreKit import. Ungate `PatternCreatorView` (currently gated behind the $2.99 unlock). |
+
+### 16.1 Updated v1 scope (post-amendment)
+
+In scope:
+- All original visual + interaction features (room, box, patterns, haptics, sound, Reduce Motion, Dynamic Type)
+- iPhone only — no iPad layout work
+- All patterns (4-4-4-4, 4-7-8, 3-4-5-3, custom) **free** for all users
+- Pattern creator **free** for all users
+- Privacy policy hosted at a stable URL (still TBD; see BACKLOG.md)
+- App Store submission with `Data Not Collected` nutrition labels
+
+Out of scope (deferred to v1.1+ per BACKLOG.md):
+- StoreKit, IAP, tip jar, Restore Purchases
+- iPad layout
+- Apple Watch, Live Activity, Mac Catalyst
+- All original §15 v2+ items
+
+### 16.2 A10 — done bar (the bar this build must clear)
+
+> "I can run a full 8-round session with my eyes closed, and nothing about it annoys me."
+
+This is the **only** definition of done that matters for S2+ verification. Motion timing against a stopwatch, haptics, audio cues, the end-of-session experience — every Part A value lives or dies against this sentence.
+
+---
+
+*Original spec: 2026-07-22. Amendment: 2026-08-19.*

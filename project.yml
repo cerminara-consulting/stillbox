@@ -57,7 +57,7 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.cerminara.stillbox
-        TARGETED_DEVICE_FAMILY: "1,2" # iPhone + iPad
+        TARGETED_DEVICE_FAMILY: "1" # iPhone only (ship-spec v2, 2026-08-19)
         SUPPORTS_MACCATALYST: "NO"
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: "NO"
         DEVELOPMENT_ASSET_PATHS:
