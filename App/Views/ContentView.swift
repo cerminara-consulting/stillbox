@@ -21,22 +21,9 @@ public struct ContentView: View {
     @State private var showAbout: Bool = false
 
     // Quote of the moment — picked once when the view appears (== app open).
-    // PLACEHOLDER list; real quotes supplied by John, swapped in via
-    // `placeholderQuotes` below.
-    @State private var currentQuote: String = ""
-
-    private static let placeholderQuotes: [String] = [
-        "Quote 1",
-        "Quote 2",
-        "Quote 3",
-        "Quote 4",
-        "Quote 5",
-        "Quote 6",
-        "Quote 7",
-        "Quote 8",
-        "Quote 9",
-        "Quote 10"
-    ]
+    // Drawn from the curated CalmQuote.library; see App/Models/CalmQuote.swift.
+    @State private var currentQuote: CalmQuote?
+    @State private var showQuoteDetail: Bool = false
 
     // Tweak these per SPEC §6.
     private let boxMinScale: CGFloat = 1.0
@@ -73,9 +60,8 @@ public struct ContentView: View {
             }
             .onAppear {
                 // Pick a fresh quote each time the view appears (= app open).
-                if currentQuote.isEmpty {
-                    currentQuote = Self.placeholderQuotes
-                        .randomElement() ?? Self.placeholderQuotes[0]
+                if currentQuote == nil {
+                    currentQuote = CalmQuote.random()
                 }
             }
             .contentShape(Rectangle()) // entire screen is tappable
@@ -120,6 +106,13 @@ public struct ContentView: View {
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showQuoteDetail) {
+                if let quote = currentQuote {
+                    QuoteDetailSheet(quote: quote)
+                        .presentationDetents([.medium])
+                        .presentationDragIndicator(.visible)
+                }
+            }
         }
     }
 
@@ -153,23 +146,41 @@ public struct ContentView: View {
         .accessibilityLabel("StillBox")
     }
 
-    /// A single rotating quote, picked at app open from `placeholderQuotes`.
+    /// A single rotating quote, picked at app open from `CalmQuote.library`.
     /// Sits in the upper third of the screen, just above the box. Idle only
     /// — disappears when a session starts so the box owns the visual focus.
+    /// Tap the attribution to open a small "About this quote" sheet with
+    /// the source link.
+    @ViewBuilder
     private var quoteOverlay: some View {
-        VStack {
-            Spacer()
-                .frame(height: 96) // push below the header
-            Text(currentQuote)
-                .font(.system(.body, design: .rounded).weight(.regular))
-                .italic()
-                .foregroundStyle(Color("BrandTextSecondary"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .accessibilityLabel("Quote")
-            Spacer()
+        if let quote = currentQuote {
+            VStack(spacing: 8) {
+                Text(quote.text)
+                    .font(.system(.body, design: .rounded).weight(.regular))
+                    .italic()
+                    .foregroundStyle(Color("BrandTextSecondary"))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 32)
+
+                Button {
+                    showQuoteDetail = true
+                } label: {
+                    Text("— \(quote.attribution)")
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(Color("BrandTextSecondary"))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 32)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("About this quote: \(quote.attribution)")
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 96) // push below the header
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } else {
+            EmptyView()
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
     /// The breathing box. Uses scale + glow to indicate phase; honors Reduce
