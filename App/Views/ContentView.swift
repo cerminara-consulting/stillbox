@@ -125,24 +125,22 @@ public struct ContentView: View {
 
     // MARK: - Sub-views
 
-    /// Header bar: small rounded square placeholder logo on the leading edge +
-    /// "StillBox" wordmark next to it. Always visible (idle and breathing),
+    /// Header bar: real app icon (from `BrandLogo` asset) on the leading edge
+    /// + "StillBox" wordmark next to it. Always visible (idle and breathing),
     /// low-contrast, top-aligned with a generous top safe-area padding so it
     /// reads as a "title bar" without competing with the box.
     ///
-    /// John will swap "StillBox" for the real app name + replace the
-    /// placeholder square with a real logo — both via `StillBoxConfig`.
+    /// The image is the same artwork as the App Store AppIcon master, scaled
+    /// down for the 28pt header slot. ResizableImage preserves the rounded
+    /// squircle; the `resizable()` modifier is required because the asset
+    /// ships as a static PNG, not a vector.
     private var headerBar: some View {
         HStack(spacing: 10) {
-            // PLACEHOLDER logo — small rounded square. Replace with real
-            // AppIcon-fragment / custom asset when the brand mark is ready.
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .strokeBorder(Color("BrandBoxStroke"), lineWidth: 1.5)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Color("BrandAccent").opacity(0.10))
-                )
+            Image("BrandLogo")
+                .resizable()
+                .aspectRatio(contentMode: .fit)
                 .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
 
             Text("StillBox")
                 .font(.system(.subheadline, design: .rounded).weight(.semibold))
