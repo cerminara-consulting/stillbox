@@ -25,12 +25,6 @@ public struct AppSettings: Codable, Equatable {
     public var hapticsEnabled: Bool
     public var reduceMotionOverride: Bool?
 
-    // MARK: - Tip jar + unlocks (UI-only mirror of StoreManager state)
-
-    /// True if the user has unlocked the "Patterns" IAP. Mirrored from
-    /// StoreManager for fast Settings-sheet access.
-    public var patternsUnlocked: Bool
-
     // MARK: - Init / defaults
 
     public init(
@@ -39,8 +33,7 @@ public struct AppSettings: Codable, Equatable {
         roundCount: RoundCount = .four,
         soundEnabled: Bool = false,
         hapticsEnabled: Bool = true,
-        reduceMotionOverride: Bool? = nil,
-        patternsUnlocked: Bool = false
+        reduceMotionOverride: Bool? = nil
     ) {
         self.selectedPatternID = selectedPatternID
         self.customPatterns = customPatterns
@@ -48,7 +41,6 @@ public struct AppSettings: Codable, Equatable {
         self.soundEnabled = soundEnabled
         self.hapticsEnabled = hapticsEnabled
         self.reduceMotionOverride = reduceMotionOverride
-        self.patternsUnlocked = patternsUnlocked
     }
 
     public static let defaults = AppSettings()

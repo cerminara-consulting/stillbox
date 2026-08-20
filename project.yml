@@ -31,7 +31,6 @@ targets:
       - path: App/Views
       - path: App/Engine
       - path: App/Models
-      - path: App/Store
       - path: App/Assets.xcassets
       - path: App/PreviewContent
     info:

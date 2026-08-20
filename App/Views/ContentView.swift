@@ -14,7 +14,6 @@ import SwiftUI
 public struct ContentView: View {
 
     @EnvironmentObject private var engine: BreathEngine
-    @StateObject private var store = StoreManager()
     @State private var haptics = HapticEngine()
     @State private var showSettings: Bool = false
     @State private var showAbout: Bool = false
@@ -44,14 +43,19 @@ public struct ContentView: View {
             .contentShape(Rectangle()) // entire screen is tappable
             .onTapGesture {
                 engine.toggleSession()
-                if engine.hapticsEnabled {
-                    haptics.phaseChanged()
-                }
                 // Schedule completion haptics when transitioning out of breathing.
                 if case .completing = engine.session {
                     if engine.hapticsEnabled {
                         haptics.completionPulse()
                     }
+                }
+            }
+            // Per-second haptic tick. Fires once per real second (engine
+            // uses CACurrentMediaTime as the monotonic reference). Each tick
+            // is a single light `impactOccurred` call.
+            .onReceive(engine.tickPublisher) { _ in
+                if engine.hapticsEnabled {
+                    haptics.phaseChanged()
                 }
             }
             .gesture(
@@ -70,13 +74,11 @@ public struct ContentView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsSheet()
                     .environmentObject(engine)
-                    .environmentObject(store)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showAbout) {
                 AboutView()
-                    .environmentObject(store)
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
             }

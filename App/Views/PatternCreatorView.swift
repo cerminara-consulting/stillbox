@@ -7,9 +7,9 @@ import SwiftUI
 /// Validation rules (from `BreathingPattern.isValid`):
 ///   - Each phase must be between 1 and 12 seconds inclusive.
 ///   - Patterns with any phase outside that range disable the Save button.
+///
+/// Ship-spec v2 (2026-08-19): free for all users (no StoreKit gating).
 public struct PatternCreatorView: View {
-
-    @EnvironmentObject private var store: StoreManager
 
     @State private var name: String = "My pattern"
     @State private var inhale: Double = 4
@@ -101,6 +101,5 @@ public struct PatternCreatorView: View {
 #Preview {
     NavigationStack {
         PatternCreatorView { _ in }
-            .environmentObject(StoreManager())
     }
 }

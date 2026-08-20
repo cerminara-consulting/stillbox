@@ -1,11 +1,11 @@
 import SwiftUI
 
-/// About sheet — version info, attribution, privacy link, restore purchases.
+/// About sheet — version info, attribution, privacy link.
+///
+/// Ship-spec v2 (2026-08-19): no Restore Purchases (StoreKit removed).
 public struct AboutView: View {
 
-    @EnvironmentObject private var store: StoreManager
     @Environment(\.dismiss) private var dismiss
-    @State private var showingRestoreConfirmation: Bool = false
 
     private var versionString: String {
         let info = Bundle.main.infoDictionary
@@ -38,22 +38,6 @@ public struct AboutView: View {
             Spacer()
 
             Button {
-                Task {
-                    await store.restorePurchases()
-                    showingRestoreConfirmation = true
-                }
-            } label: {
-                Text("Restore purchases")
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color("BrandBoxStroke"), lineWidth: 1)
-                    )
-            }
-            .foregroundStyle(Color("BrandAccent"))
-
-            Button {
                 dismiss()
             } label: {
                 Text("Close")
@@ -67,11 +51,6 @@ public struct AboutView: View {
         .padding(.vertical, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(Color("BrandBackground").ignoresSafeArea())
-        .alert("Restore complete", isPresented: $showingRestoreConfirmation) {
-            Button("OK", role: .cancel) { }
-        } message: {
-            Text("Your purchases have been restored.")
-        }
     }
 
     @ViewBuilder
@@ -91,5 +70,4 @@ public struct AboutView: View {
 
 #Preview {
     AboutView()
-        .environmentObject(StoreManager())
 }

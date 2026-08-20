@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import Combine
+import QuartzCore
 
 /// The runtime engine for a breath session.
 ///
@@ -11,8 +12,13 @@ import Combine
 ///
 /// The engine does NOT own the audio/haptic playback — that lives in the
 /// view layer, where it can be silenced when Reduce Motion is on. Instead the
-/// engine publishes a `phaseTick` whenever the phase changes, and the view
+/// engine publishes `phaseTick` whenever the phase changes, and the view
 /// reacts by playing a cue and updating the visible label.
+///
+/// Ship-spec v2 (2026-08-19): the engine also publishes `tickPublisher`
+/// firing once per real second (monotonic `CACurrentMediaTime` reference),
+/// so the view layer can fire one haptic per second of breath — independent
+/// of phase boundaries.
 @MainActor
 public final class BreathEngine: ObservableObject {
 
@@ -41,6 +47,11 @@ public final class BreathEngine: ObservableObject {
     /// touches `customPatterns`, so a re-sync on present is sufficient.
     @Published public var customPatterns: [BreathingPattern] = []
 
+    /// Fires once per real second of an active session. The view layer
+    /// uses this to drive the per-second haptic. Subscribers MUST be on
+    /// `@MainActor`; emitted on the main actor.
+    public let tickPublisher = PassthroughSubject<Int, Never>()
+
     /// True while a session is in the completion animation.
     public var isCompleting: Bool { if case .completing = session { return true } else { return false } }
 
@@ -50,6 +61,7 @@ public final class BreathEngine: ObservableObject {
     // MARK: - Internals
 
     private var phaseTask: Task<Void, Never>?
+    private var tickTask: Task<Void, Never>?
     private var systemReduceMotion: Bool = UIAccessibility.isReduceMotionEnabled
 
     // MARK: - Types
@@ -82,6 +94,7 @@ public final class BreathEngine: ObservableObject {
         // Defensive: stop any prior task (we may have been called twice
         // in quick succession).
         phaseTask?.cancel()
+        tickTask?.cancel()
 
         elapsedRounds = 0
         currentPhase = .inhale
@@ -90,6 +103,9 @@ public final class BreathEngine: ObservableObject {
         phaseTask = Task { [weak self] in
             await self?.runBreathLoop()
         }
+        tickTask = Task { [weak self] in
+            await self?.runTickLoop()
+        }
     }
 
     /// Stop the session. If the session was breathing, transition to
@@ -97,6 +113,8 @@ public final class BreathEngine: ObservableObject {
     public func stopSession() {
         phaseTask?.cancel()
         phaseTask = nil
+        tickTask?.cancel()
+        tickTask = nil
 
         switch session {
         case .breathing:
@@ -169,10 +187,6 @@ public final class BreathEngine: ObservableObject {
     /// `currentPhase` updates for the view to react to, and increments
     /// `elapsedRounds` after each complete cycle.
     private func runBreathLoop() async {
-        // Initial phase tick so the view renders the first phase immediately.
-        // (The view already knows we started, but if the loop were to skip
-        // the first await the UI would briefly show the wrong phase.)
-
         while !Task.isCancelled {
             // Per-phase duration in seconds.
             let phaseSeconds: Int
@@ -208,6 +222,33 @@ public final class BreathEngine: ObservableObject {
 
             // Advance to next phase.
             currentPhase = currentPhase.next
+        }
+    }
+
+    // MARK: - Tick loop
+
+    /// Fires `tickPublisher.send(1)` on every real-second boundary of an
+    /// active session. Uses `CACurrentMediaTime()` as the monotonic reference
+    /// so ticks are exactly 1 second apart regardless of phase length, OS
+    /// scheduling jitter, or main-actor blocking. Sleeps in 50ms slices so
+    /// cancellation is responsive.
+    private func runTickLoop() async {
+        let startTime = CACurrentMediaTime()
+        var nextTickAt: CFTimeInterval = startTime + 1.0
+        var tickIndex: Int = 0
+
+        while !Task.isCancelled {
+            let now = CACurrentMediaTime()
+            if now >= nextTickAt {
+                tickIndex += 1
+                tickPublisher.send(tickIndex)
+                nextTickAt = startTime + CFTimeInterval(tickIndex + 1)
+            } else {
+                // Sleep ~50ms, but bounded by the time until the next tick
+                // so we don't oversleep when a tick is imminent.
+                let msUntilNextTick = max(0.01, min(0.05, nextTickAt - now))
+                try? await Task.sleep(nanoseconds: UInt64(msUntilNextTick * 1_000_000_000))
+            }
         }
     }
 }
