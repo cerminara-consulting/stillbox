@@ -106,6 +106,11 @@ public final class BreathEngine: ObservableObject {
         tickTask = Task { [weak self] in
             await self?.runTickLoop()
         }
+
+        // Immediate first-tick haptic. Without this the user gets silence
+        // for a full real second after tapping to start, then a tick —
+        // which feels haptic-deaf. S1 review feedback.
+        tickPublisher.send(0)
     }
 
     /// Stop the session. If the session was breathing, transition to

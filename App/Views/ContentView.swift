@@ -3,20 +3,40 @@ import SwiftUI
 /// "The Room" — the only screen of StillBox.
 ///
 /// Layers, top to bottom:
-///   1. Settings sheet trigger (small text, low-contrast, bottom-leading)
-///   2. About trigger (small text, low-contrast, bottom-trailing)
-///   3. "breathe" prompt label (idle only)
-///   4. The breathing box (animated; phase-dependent)
-///   5. Background fill (the "room")
+///   1. Header bar — logo + "StillBox" wordmark (always visible, low-contrast)
+///   2. A rotating quote (idle only, sits below header above the box)
+///   3. Settings sheet trigger (small text, low-contrast, bottom-leading)
+///   4. About trigger (small text, low-contrast, bottom-trailing)
+///   5. "breathe" prompt label (idle only)
+///   6. The breathing box (animated; phase-dependent)
+///   7. Background fill (the "room")
 ///
-/// The entire screen — except the two small text buttons — is the tap target.
-/// Tapping starts/stops a session.
+/// The entire screen — except the two small text buttons and the header logo —
+/// is the tap target. Tapping starts/stops a session.
 public struct ContentView: View {
 
     @EnvironmentObject private var engine: BreathEngine
     @State private var haptics = HapticEngine()
     @State private var showSettings: Bool = false
     @State private var showAbout: Bool = false
+
+    // Quote of the moment — picked once when the view appears (== app open).
+    // PLACEHOLDER list; real quotes supplied by John, swapped in via
+    // `placeholderQuotes` below.
+    @State private var currentQuote: String = ""
+
+    private static let placeholderQuotes: [String] = [
+        "Quote 1",
+        "Quote 2",
+        "Quote 3",
+        "Quote 4",
+        "Quote 5",
+        "Quote 6",
+        "Quote 7",
+        "Quote 8",
+        "Quote 9",
+        "Quote 10"
+    ]
 
     // Tweak these per SPEC §6.
     private let boxMinScale: CGFloat = 1.0
@@ -28,9 +48,20 @@ public struct ContentView: View {
                 Color("BrandBackground")
                     .ignoresSafeArea()
 
+                // Header bar at top (logo + wordmark)
+                VStack {
+                    headerBar
+                    Spacer()
+                }
+
                 // The box (always present so the layout doesn't shift)
                 boxView(size: boxSize(in: geo.size))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                // Quote (idle only) — sits in the upper third, above the box
+                if engine.session == .idle {
+                    quoteOverlay
+                }
 
                 // Phase label / idle prompt
                 promptOverlay
@@ -38,6 +69,13 @@ public struct ContentView: View {
                 // Settings + About links (visible only while idle)
                 if engine.session == .idle {
                     bottomLinks
+                }
+            }
+            .onAppear {
+                // Pick a fresh quote each time the view appears (= app open).
+                if currentQuote.isEmpty {
+                    currentQuote = Self.placeholderQuotes
+                        .randomElement() ?? Self.placeholderQuotes[0]
                 }
             }
             .contentShape(Rectangle()) // entire screen is tappable
@@ -86,6 +124,55 @@ public struct ContentView: View {
     }
 
     // MARK: - Sub-views
+
+    /// Header bar: small rounded square placeholder logo on the leading edge +
+    /// "StillBox" wordmark next to it. Always visible (idle and breathing),
+    /// low-contrast, top-aligned with a generous top safe-area padding so it
+    /// reads as a "title bar" without competing with the box.
+    ///
+    /// John will swap "StillBox" for the real app name + replace the
+    /// placeholder square with a real logo — both via `StillBoxConfig`.
+    private var headerBar: some View {
+        HStack(spacing: 10) {
+            // PLACEHOLDER logo — small rounded square. Replace with real
+            // AppIcon-fragment / custom asset when the brand mark is ready.
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .strokeBorder(Color("BrandBoxStroke"), lineWidth: 1.5)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color("BrandAccent").opacity(0.10))
+                )
+                .frame(width: 28, height: 28)
+
+            Text("StillBox")
+                .font(.system(.subheadline, design: .rounded).weight(.semibold))
+                .foregroundStyle(Color("BrandTextSecondary"))
+        }
+        .padding(.leading, 20)
+        .padding(.top, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("StillBox")
+    }
+
+    /// A single rotating quote, picked at app open from `placeholderQuotes`.
+    /// Sits in the upper third of the screen, just above the box. Idle only
+    /// — disappears when a session starts so the box owns the visual focus.
+    private var quoteOverlay: some View {
+        VStack {
+            Spacer()
+                .frame(height: 96) // push below the header
+            Text(currentQuote)
+                .font(.system(.body, design: .rounded).weight(.regular))
+                .italic()
+                .foregroundStyle(Color("BrandTextSecondary"))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+                .accessibilityLabel("Quote")
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
 
     /// The breathing box. Uses scale + glow to indicate phase; honors Reduce
     /// Motion by staying static.

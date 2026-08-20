@@ -21,7 +21,10 @@ public final class HapticEngine {
 
     /// Single tap intended to be called on each breath phase change.
     public func phaseChanged() {
-        generator.impactOccurred(intensity: 0.6)
+        // 0.85 is the strongest perceptible soft-tap that still reads as
+        // "calm" rather than "alert". 0.6 was tested as too quiet on real
+        // iPhone hardware (S1 review feedback).
+        generator.impactOccurred(intensity: 0.85)
         // Re-prepare for next call.
         generator.prepare()
     }
