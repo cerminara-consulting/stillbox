@@ -4,15 +4,14 @@ import SwiftUI
 ///
 /// Layers, top to bottom:
 ///   1. Header bar — logo + "StillBox" wordmark (always visible, low-contrast)
-///   2. A rotating quote (idle only, sits below header above the box)
-///   3. Settings sheet trigger (small text, low-contrast, bottom-leading)
-///   4. About trigger (small text, low-contrast, bottom-trailing)
-///   5. "breathe" prompt label (idle only)
-///   6. The breathing box (animated; phase-dependent)
-///   7. Background fill (the "room")
+///   2. A rotating quote (idle + breathing, sits below header above the box)
+///   3. The breathing box (animated; phase-dependent) + phase label inside
+///   4. Bottom affordance — "Tap anywhere to begin" (idle) or "Tap to stop"
+///      (breathing), with Patterns/About footnote links beneath
+///   5. Background fill (the "room")
 ///
-/// The entire screen — except the two small text buttons and the header logo —
-/// is the tap target. Tapping starts/stops a session.
+/// The entire screen is the tap target. The affordance labels at the top
+/// and bottom are visual cues, not buttons.
 public struct ContentView: View {
 
     @EnvironmentObject private var engine: BreathEngine
@@ -45,17 +44,23 @@ public struct ContentView: View {
                 boxView(size: boxSize(in: geo.size))
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-                // Quote (idle only) — sits in the upper third, above the box
-                if engine.session == .idle {
+                // Quote (idle and breathing) — sits in the upper third, above the box.
+                // Per John (2026-08-20): keep the quote visible during
+                // breathing too. The box is the focal point, but the quote
+                // belongs to the room, not to the idle state.
+                if engine.session != .completing {
                     quoteOverlay
                 }
 
-                // Phase label / idle prompt
+                // Phase label inside the box (idle = nothing, breathing = phase name)
                 promptOverlay
 
-                // Settings + About links (visible only while idle)
-                if engine.session == .idle {
-                    bottomLinks
+                // Bottom affordance + footnote links. Pinned to the
+                // bottom of the screen via VStack { Spacer(); bottom }.
+                // Empty during completing so the box glow owns focus.
+                VStack {
+                    Spacer()
+                    bottomAffordance
                 }
             }
             .onAppear {
@@ -147,8 +152,10 @@ public struct ContentView: View {
     }
 
     /// A single rotating quote, picked at app open from `CalmQuote.library`.
-    /// Sits in the upper third of the screen, just above the box. Idle only
-    /// — disappears when a session starts so the box owns the visual focus.
+    /// Sits in the upper third of the screen, just above the box. Visible
+    /// during idle AND breathing (per John 2026-08-20) — the quote belongs
+    /// to the room, not to any one state. Hidden only during `.completing`
+    /// so the box glow owns focus at session end.
     /// Tap the attribution to open a small "About this quote" sheet with
     /// the source link.
     @ViewBuilder
@@ -249,18 +256,13 @@ public struct ContentView: View {
         return min(basis, 320)
     }
 
-    /// The phase label (inside the box, in low-contrast text) or the idle
-    /// "breathe" prompt (above the box, slightly larger).
+    /// The phase label inside the box. Idle state does NOT render a phase
+    /// label — the "Tap to begin" prompt at the bottom of the screen does
+    /// the talking while idle, so the box area stays clean.
     @ViewBuilder
     private var promptOverlay: some View {
         VStack(spacing: 24) {
-            if engine.session == .idle {
-                Text("breathe")
-                    .font(.system(.largeTitle, design: .rounded).weight(.heavy))
-                    .foregroundStyle(Color("BrandTextPrimary"))
-                    .accessibilityHidden(true)
-            } else {
-                // Phase text inside the box, low-contrast — never competing.
+            if engine.session != .idle {
                 Text(engine.currentPhase.label)
                     .font(.system(.title, design: .rounded).weight(.heavy))
                     .foregroundStyle(Color("BrandTextSecondary"))
@@ -271,30 +273,67 @@ public struct ContentView: View {
         .multilineTextAlignment(.center)
     }
 
-    /// Two small links at the bottom of the screen, visible only when idle.
-    private var bottomLinks: some View {
-        VStack {
-            Spacer()
-            HStack {
-                Button("Patterns & settings") {
-                    showSettings = true
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color("BrandTextSecondary"))
-                .font(.system(.footnote, design: .rounded))
-
-                Spacer()
-
-                Button("About") {
-                    showAbout = true
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color("BrandTextSecondary"))
-                .font(.system(.footnote, design: .rounded))
+    /// Bottom affordance + secondary links. Behavior by session state:
+    ///
+    /// - **idle**: "Tap to begin" prompt (the main call to action) +
+    ///   small Patterns/About footnote links in the corners.
+    /// - **breathing**: a clear "Tap to stop" affordance + the same
+    ///   footnote links, lower-contrast so the stop text dominates.
+    /// - **completing**: nothing — the session is winding down, the box
+    ///   glow owns the focus.
+    ///
+    /// The whole screen is still the tap target (`.contentShape(Rectangle())`
+    /// at the ZStack level); these labels are visual cues, not buttons.
+    @ViewBuilder
+    private var bottomAffordance: some View {
+        switch engine.session {
+        case .idle:
+            VStack(spacing: 18) {
+                Text("Tap anywhere to begin")
+                    .font(.system(.title3, design: .rounded).weight(.medium))
+                    .foregroundStyle(Color("BrandTextPrimary"))
+                    .accessibilityHidden(true)
+                bottomLinks
             }
-            .padding(.horizontal, 24)
             .padding(.bottom, 24)
+
+        case .breathing:
+            VStack(spacing: 18) {
+                Text("Tap to stop")
+                    .font(.system(.title3, design: .rounded).weight(.medium))
+                    .foregroundStyle(Color("BrandTextPrimary"))
+                    .accessibilityHidden(true)
+                bottomLinks
+            }
+            .padding(.bottom, 24)
+
+        case .completing:
+            EmptyView()
         }
+    }
+
+    /// Two small footnote links — visible at the bottom of the screen in
+    /// both idle and breathing states. Low-contrast so they never compete
+    /// with the session affordance above them.
+    private var bottomLinks: some View {
+        HStack {
+            Button("Patterns & settings") {
+                showSettings = true
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color("BrandTextSecondary"))
+            .font(.system(.footnote, design: .rounded))
+
+            Spacer()
+
+            Button("About") {
+                showAbout = true
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(Color("BrandTextSecondary"))
+            .font(.system(.footnote, design: .rounded))
+        }
+        .padding(.horizontal, 24)
     }
 }
 
