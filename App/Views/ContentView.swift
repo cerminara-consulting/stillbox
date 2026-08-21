@@ -3,12 +3,16 @@ import SwiftUI
 /// "The Room" — the only screen of StillBox.
 ///
 /// Layers, top to bottom:
-///   1. Header bar — logo + "StillBox" wordmark (always visible, low-contrast)
+///   1. Header bar — logo (clipped to rounded squircle) + "StillBox"
+///      wordmark (always visible, low-contrast)
 ///   2. A rotating quote (idle + breathing, sits below header above the box)
 ///   3. The breathing box (animated; phase-dependent) + phase label inside
 ///   4. Bottom affordance — "Tap anywhere to begin" (idle) or "Tap to stop"
-///      (breathing), with Patterns/About footnote links beneath
-///   5. Background fill (the "room")
+///      (breathing), positioned halfway between the box's bottom edge and
+///      the footnote-links row
+///   5. Footnote links (Patterns & settings / About) — pinned to the bottom
+///      safe area
+///   6. Background fill (the "room")
 ///
 /// The entire screen is the tap target. The affordance labels at the top
 /// and bottom are visual cues, not buttons.
@@ -55,13 +59,24 @@ public struct ContentView: View {
                 // Phase label inside the box (idle = nothing, breathing = phase name)
                 promptOverlay
 
-                // Bottom affordance + footnote links. Pinned to the
-                // bottom of the screen via VStack { Spacer(); bottom }.
-                // Empty during completing so the box glow owns focus.
-                VStack {
-                    Spacer()
-                    bottomAffordance
-                }
+                // Bottom affordance + footnote links. The affordance text is
+                // positioned at the geometric midpoint between the box's
+                // bottom edge and the footnote-links row — per John
+                // (2026-08-20). Footnote links stay pinned to the bottom
+                // safe area. Whole-screen tap target still works; these
+                // are visual cues, not buttons.
+                bottomLinks
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 24)
+
+                bottomAffordanceText
+                    .position(
+                        x: geo.width / 2,
+                        y: midpointBetweenBoxBottomAndLinks(
+                            boxBottom: geo.height / 2 + boxSize(in: geo.size) / 2,
+                            linksTop: geo.height - 24 - footnoteLinksHeight
+                        )
+                    )
             }
             .onAppear {
                 // Pick a fresh quote each time the view appears (= app open).
@@ -129,15 +144,17 @@ public struct ContentView: View {
     /// reads as a "title bar" without competing with the box.
     ///
     /// The image is the same artwork as the App Store AppIcon master, scaled
-    /// down for the 28pt header slot. ResizableImage preserves the rounded
-    /// squircle; the `resizable()` modifier is required because the asset
-    /// ships as a static PNG, not a vector.
+    /// down for the 28pt header slot. We clip to a rounded squircle
+    /// (corner radius ≈22% of side, continuous style) so the header logo
+    /// reads as a proper iOS-style icon, matching the App Store AppIcon
+    /// shape. Per John (2026-08-20) — the AppIcon itself is left untouched.
     private var headerBar: some View {
         HStack(spacing: 10) {
             Image("BrandLogo")
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 28, height: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                 .accessibilityHidden(true)
 
             Text("StillBox")
@@ -256,6 +273,28 @@ public struct ContentView: View {
         return min(basis, 320)
     }
 
+    /// Approximate height of the footnote-links row at the bottom of the
+    /// screen. Used to anchor the affordance text halfway between the
+    /// box's bottom edge and the links.
+    ///
+    /// Why approximate: SwiftUI doesn't expose rendered heights at
+    /// `body`-evaluation time without a `GeometryReader` inside the view
+    /// itself, which would force a second layout pass. The row is a
+    /// single line of `.footnote` rounded text (~16pt) plus ~10pt of
+    /// intrinsic padding, so 26pt is accurate enough for midpoint
+    /// positioning.
+    private var footnoteLinksHeight: CGFloat { 26 }
+
+    /// Computes the y-coordinate (in screen-space, top-left origin) for
+    /// the affordance text so it lands halfway between the box's bottom
+    /// edge and the top of the footnote-links row.
+    private func midpointBetweenBoxBottomAndLinks(
+        boxBottom: CGFloat,
+        linksTop: CGFloat
+    ) -> CGFloat {
+        (boxBottom + linksTop) / 2
+    }
+
     /// The phase label inside the box. Idle state does NOT render a phase
     /// label — the "Tap to begin" prompt at the bottom of the screen does
     /// the talking while idle, so the box area stays clean.
@@ -273,40 +312,23 @@ public struct ContentView: View {
         .multilineTextAlignment(.center)
     }
 
-    /// Bottom affordance + secondary links. Behavior by session state:
-    ///
-    /// - **idle**: "Tap to begin" prompt (the main call to action) +
-    ///   small Patterns/About footnote links in the corners.
-    /// - **breathing**: a clear "Tap to stop" affordance + the same
-    ///   footnote links, lower-contrast so the stop text dominates.
-    /// - **completing**: nothing — the session is winding down, the box
-    ///   glow owns the focus.
-    ///
-    /// The whole screen is still the tap target (`.contentShape(Rectangle())`
-    /// at the ZStack level); these labels are visual cues, not buttons.
+    /// Bottom affordance text (without footnote links — those are positioned
+    /// separately at the very bottom of the screen). State-driven:
+    /// idle = "Tap anywhere to begin", breathing = "Tap to stop",
+    /// completing = nothing.
     @ViewBuilder
-    private var bottomAffordance: some View {
+    private var bottomAffordanceText: some View {
         switch engine.session {
         case .idle:
-            VStack(spacing: 18) {
-                Text("Tap anywhere to begin")
-                    .font(.system(.title3, design: .rounded).weight(.medium))
-                    .foregroundStyle(Color("BrandTextPrimary"))
-                    .accessibilityHidden(true)
-                bottomLinks
-            }
-            .padding(.bottom, 24)
-
+            Text("Tap anywhere to begin")
+                .font(.system(.title3, design: .rounded).weight(.medium))
+                .foregroundStyle(Color("BrandTextPrimary"))
+                .accessibilityHidden(true)
         case .breathing:
-            VStack(spacing: 18) {
-                Text("Tap to stop")
-                    .font(.system(.title3, design: .rounded).weight(.medium))
-                    .foregroundStyle(Color("BrandTextPrimary"))
-                    .accessibilityHidden(true)
-                bottomLinks
-            }
-            .padding(.bottom, 24)
-
+            Text("Tap to stop")
+                .font(.system(.title3, design: .rounded).weight(.medium))
+                .foregroundStyle(Color("BrandTextPrimary"))
+                .accessibilityHidden(true)
         case .completing:
             EmptyView()
         }
