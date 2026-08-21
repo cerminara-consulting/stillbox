@@ -86,12 +86,21 @@ public struct ContentView: View {
             }
             .contentShape(Rectangle()) // entire screen is tappable
             .onTapGesture {
+                // Capture state before toggling so we can fire the right
+                // haptic (start vs stop) based on the transition direction.
+                let wasIdle = (engine.session == .idle)
                 engine.toggleSession()
-                // Schedule completion haptics when transitioning out of breathing.
-                if case .completing = engine.session {
-                    if engine.hapticsEnabled {
-                        haptics.completionPulse()
-                    }
+                guard engine.hapticsEnabled else { return }
+                switch engine.session {
+                case .breathing where wasIdle:
+                    // Idle -> breathing = user started a session.
+                    haptics.sessionStarted()
+                case .completing:
+                    // Breathing -> completing = user stopped mid-session.
+                    haptics.sessionStopped()
+                    haptics.completionPulse()
+                default:
+                    break
                 }
             }
             // Per-second haptic tick. Fires once per real second (engine
