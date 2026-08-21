@@ -202,15 +202,19 @@ public final class BreathEngine: ObservableObject {
             case .holdOut: phaseSeconds = pattern.holdOutSeconds
             }
 
-            // Sleep in 100ms slices so cancellation can interrupt
-            // mid-phase. Direct `Task.sleep(seconds:)` couldn't be cancelled
-            // until the full phase elapsed, which feels unresponsive.
-            let sleepSliceNs: UInt64 = 100_000_000
-            let elapsedNs: UInt64 = UInt64(phaseSeconds) * 1_000_000_000
-            var accum: UInt64 = 0
-            while accum < elapsedNs && !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: sleepSliceNs)
-                accum += sleepSliceNs
+            // Wall-clock wait anchored on CACurrentMediaTime so the phase
+            // is *exactly* the requested duration regardless of how much
+            // OS scheduling jitter accumulates over the 100ms slices. The
+            // slice-sleep approach used previously drifted 50–200ms per
+            // phase on real hardware, which made 4s feel imprecise.
+            let phaseStart = CACurrentMediaTime()
+            let phaseDuration = Double(phaseSeconds)
+            let sleepSliceSeconds: Double = 0.1
+            while !Task.isCancelled {
+                let elapsed = CACurrentMediaTime() - phaseStart
+                if elapsed >= phaseDuration { break }
+                let remaining = phaseDuration - elapsed
+                try? await Task.sleep(nanoseconds: UInt64(min(remaining, sleepSliceSeconds) * 1_000_000_000))
             }
             if Task.isCancelled { return }
 

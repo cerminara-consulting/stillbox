@@ -261,7 +261,9 @@ public struct ContentView: View {
     }
 
     /// Phase duration in seconds, used as the animation duration so the box
-    /// timing *is* the breath timing. Matches the engine's per-phase clocks.
+    /// timing *is* the breath timing. Matches the engine's per-phase clocks
+    /// exactly — the engine is now wall-clock anchored (CACurrentMediaTime)
+    /// so no cushion is needed to hide drift. See `runBreathLoop`.
     private func phaseSeconds(engine: BreathEngine) -> Double {
         let s: Int
         switch engine.currentPhase {
@@ -270,8 +272,7 @@ public struct ContentView: View {
         case .exhale:  s = engine.pattern.exhaleSeconds
         case .holdOut: s = engine.pattern.holdOutSeconds
         }
-        // A 100ms cushion inside the engine leaves a 100ms headroom here.
-        return max(0.2, Double(s) - 0.1)
+        return Double(s)
     }
 
     /// The breathing-box size, based on screen geometry. The smaller of
