@@ -71,10 +71,10 @@ public struct ContentView: View {
 
                 bottomAffordanceText
                     .position(
-                        x: geo.width / 2,
+                        x: geo.size.width / 2,
                         y: midpointBetweenBoxBottomAndLinks(
-                            boxBottom: geo.height / 2 + boxSize(in: geo.size) / 2,
-                            linksTop: geo.height - 24 - footnoteLinksHeight
+                            boxBottom: geo.size.height / 2 + boxSize(in: geo.size) / 2,
+                            linksTop: geo.size.height - 24 - footnoteLinksHeight
                         )
                     )
             }
