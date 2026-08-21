@@ -1,6 +1,11 @@
 import SwiftUI
 
-/// About sheet — version info, attribution, privacy link.
+/// About sheet — version info, attribution, links to the public
+/// Privacy Policy / Safety / Support pages.
+///
+/// Apple App Store Review Guidelines 5.1.1 + 1.4.1 require the Privacy
+/// Policy and Safety info to be reachable *from inside the app*, not just
+/// from App Store Connect. This sheet is that surface.
 ///
 /// Ship-spec v2 (2026-08-19): no Restore Purchases (StoreKit removed).
 public struct AboutView: View {
@@ -35,6 +40,20 @@ public struct AboutView: View {
                 row("Account", value: "None.")
             }
 
+            Divider()
+                .padding(.vertical, 4)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("READ MORE")
+                    .font(.system(.caption, design: .rounded).weight(.heavy))
+                    .foregroundStyle(Color("BrandTextSecondary"))
+                    .accessibilityHidden(true)
+
+                webLink("Privacy Policy", url: StillBoxConfig.privacyPolicyURL)
+                webLink("Safety", url: StillBoxConfig.safetyURL)
+                webLink("Support", url: StillBoxConfig.supportURL)
+            }
+
             Spacer()
 
             Button {
@@ -65,6 +84,24 @@ public struct AboutView: View {
                 .foregroundStyle(Color("BrandTextPrimary"))
             Spacer()
         }
+    }
+
+    /// Opens an external URL in the system browser. Uses Link so SwiftUI
+    /// shows the standard Safari/Chrome chooser on iOS.
+    @ViewBuilder
+    private func webLink(_ title: String, url: URL) -> some View {
+        Link(destination: url) {
+            HStack {
+                Text(title)
+                    .font(.system(.body, design: .rounded))
+                    .foregroundStyle(Color("BrandTextPrimary"))
+                Spacer()
+                Image(systemName: "arrow.up.forward")
+                    .font(.system(.footnote, design: .rounded))
+                    .foregroundStyle(Color("BrandTextSecondary"))
+            }
+        }
+        .accessibilityHint("Opens in browser")
     }
 }
 
